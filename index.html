@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Férias CLT</title>
+    <link rel="manifest" href="./manifest.json">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            .print-card { border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; background: white !important; }
+            .print-text-dark { color: #1e293b !important; }
+            .print-border { border-color: #cbd5e1 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 relative">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <div class="inline-flex items-center justify-center p-3 bg-blue-500/10 text-blue-400 rounded-2xl mb-3 border border-blue-500/20">
+                <i class="fa-solid fa-calculator text-3xl"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                Calculadora de Férias <span class="text-blue-400">CLT</span>
+            </h1>
+            <p class="text-slate-400 mt-1 max-w-lg mx-auto text-sm md:text-base">
+                Simule valores exatos, descontos oficiais (INSS e IRRF), benefício de retorno de férias (2/3) e a data de retorno ao trabalho.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Formulário de Entrada -->
+            <div class="lg:col-span-5 bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl no-print">
+                <h2 class="text-lg font-bold mb-4 text-slate-100 flex items-center justify-between border-b border-slate-700/80 pb-3">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-blue-400"></i> Dados de Entrada
+                    </span>
+                    <button type="button" onclick="resetForm()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1 font-normal">
+                        <i class="fa-solid fa-rotate-left"></i> Limpar
+                    </button>
+                </h2>
+                
+                <form id="vacationForm" class="space-y-4" onsubmit="event.preventDefault(); calculateVacation();">
+                    <!-- Salário Bruto -->
+                    <div>
+                        <label for="grossSalary" class="block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-300">
+                            Salário Bruto (R$) <span class="text-rose-400">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-medium text-sm">R$</span>
+                            <input type="number" id="grossSalary" step="0.01" min="0" placeholder="3000.00" value="3000.00" required
+                                class="w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder-slate-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Dias de Férias -->
+                    <div>
+                        <label for="vacationDays" class="block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-300">
+                            Dias de Férias a Gozar
+                        </label>
+                        <select id="vacationDays" 
+                            class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all text-sm cursor-pointer">
+                            <option value="30" id="opt30Days" selected>30 dias (Período Integral)</option>
+                            <option value="20">20 dias</option>
+                            <option value="15">15 dias</option>
+                            <option value="10">10 dias</option>
+                        </select>
+                    </div>
+
+                    <!-- Média de Horas Extras / Variáveis -->
+                    <div>
+                        <label for="extraAvg" class="block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-300">
+                            Média de Horas Extras/Variáveis (R$)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-medium text-sm">R$</span>
+                            <input type="number" id="extraAvg" step="0.01" min="0" value="0.00" placeholder="0.00"
+                                class="w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder-slate-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Média de Adicional Noturno -->
+                    <div>
+                        <label for="nightShiftAvg" class="block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-300">
+                            Média Mensal Adicional Noturno (R$)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-medium text-sm">R$</span>
+                            <input type="number" id="nightShiftAvg" step="0.01" min="0" value="0.00" placeholder="0.00"
+                                class="w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder-slate-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Periculosidade Checkbox -->
+                    <div class="p-3 bg-slate-900/50 border border-slate-700/80 rounded-xl">
+                        <label class="flex items-center justify-between cursor-pointer group">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300 group-hover:text-white transition-colors">
+                                Adicional de Periculosidade (30%)
+                            </span>
+                            <input type="checkbox" id="hazardPay" class="w-4 h-4 text-blue-600 rounded bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-slate-800 cursor-pointer">
+                        </label>
+                        <span class="text-[11px] text-slate-400 mt-1 block">Incide 30% sobre o salário base bruto</span>
+                    </div>
+
+                    <!-- Faltas Não Justificadas -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label for="unjustifiedAbsences" class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                Faltas Não Justificadas
+                            </label>
+                            <span class="text-[11px] text-slate-400">Período aquisitivo</span>
+                        </div>
+                        <input type="number" id="unjustifiedAbsences" min="0" value="0" placeholder="0"
+                            class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all text-sm">
+                        <div id="absenceWarning" class="mt-1.5 p-2 bg-slate-900/50 rounded-lg border border-slate-700 text-xs text-slate-400 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-info text-blue-400"></i>
+                            <span>Direito integral: 30 dias de férias</span>
+                        </div>
+                    </div>
+
+                    <!-- Número de Dependentes -->
+                    <div>
+                        <label for="dependents" class="block text-xs font-semibold uppercase tracking-wider mb-1.5 text-slate-300">
+                            Número de Dependentes (IRRF)
+                        </label>
+                        <input type="number" id="dependents" min="0" value="0" placeholder="0"
+                            class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all text-sm">
+                    </div>
+
+                    <!-- Opções Adicionais -->
+                    <div class="pt-3 border-t border-slate-700/80 space-y-3">
+                        <label class="flex items-center space-x-3 cursor-pointer group">
+                            <input type="checkbox" id="sellDays" class="w-4 h-4 text-blue-600 rounded bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-slate-800 cursor-pointer">
+                            <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Vender 10 dias (Abono Pecuniário)</span>
+                        </label>
+
+                        <label class="flex items-center space-x-3 cursor-pointer group">
+                            <input type="checkbox" id="advance13th" class="w-4 h-4 text-blue-600 rounded bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-slate-800 cursor-pointer">
+                            <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Adiantar 1ª parcela do 13º Salário</span>
+                        </label>
+
+                        <label class="flex items-center space-x-3 cursor-pointer group">
+                            <input type="checkbox" id="returnBonus" class="w-4 h-4 text-blue-600 rounded bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-slate-800 cursor-pointer">
+                            <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Benefício Retorno de Férias (2/3 do Salário)</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 mt-4 active:scale-[0.99]">
+                        <i class="fa-solid fa-calculator"></i> Calcular Férias
+                    </button>
+                </form>
+            </div>
+
+            <!-- Resultado dos Cálculos -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Cards de Resumo -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-md">
+                        <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Total Proventos</span>
+                        <div class="text-2xl font-bold text-emerald-400 mt-1" id="cardEarnings">R$ 0,00</div>
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Férias + 1/3 + Adicionais</span>
+                    </div>
+
+                    <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700/80 shadow-md">
+                        <span class="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">Total Descontos</span>
+                        <div class="text-2xl font-bold text-rose-400 mt-1" id="cardDeductions">R$ 0,00</div>
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">INSS + Imposto de Renda</span>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-blue-950/60 to-slate-800 p-4 rounded-2xl border border-blue-500/40 shadow-lg shadow-blue-950/50">
+                        <span class="text-[11px] font-bold text-blue-300 uppercase tracking-wider block">Valor Líquido a Receber</span>
+                        <div class="text-2xl font-black text-blue-400 mt-1" id="cardNetTotal">R$ 0,00</div>
+                        <span class="text-[10px] text-blue-300/70 mt-0.5 block">Depositado na conta</span>
+                    </div>
+                </div>
+
+                <!-- Detalhamento de Proventos e Descontos -->
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700/80 shadow-xl print-card print-text-dark">
+                    <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4 print-border">
+                        <h3 class="text-lg font-bold text-slate-100 print-text-dark flex items-center gap-2">
+                            <i class="fa-solid fa-file-invoice-dollar text-blue-400 no-print"></i> Demonstrativo Detalhado
+                        </h3>
+                        <span class="text-xs bg-slate-700/70 text-slate-300 px-2.5 py-1 rounded-full font-medium no-print" id="badgeDaysEnjoyed">
+                            30 dias desfrutados
+                        </span>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Tabela Proventos -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-plus text-[10px]"></i> Proventos (Rendimentos)
+                                </h4>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <tbody class="divide-y divide-slate-700/50 print-border">
+                                        <tr>
+                                            <td class="py-2.5 text-slate-300 print-text-dark" id="labelVacationPay">Valor de Férias desfrutadas (30 dias)</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valVacationPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="rowHazard" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">Adicional de Periculosidade (30%) proporcional aos dias</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valHazardPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="rowNightShift" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">Média de Adicional Noturno proporcional aos dias</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valNightShiftPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-2.5 text-slate-300 print-text-dark">1/3 Constitucional de Férias</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valThirdPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="rowReturnBonus" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">Benefício Retorno de Férias (2/3 do Salário Base)</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valReturnBonusPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="rowAllowance" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">Abono Pecuniário (Venda de 10 dias)</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valAllowancePay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="rowAllowanceThird" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">1/3 Constitucional sobre Abono <span class="text-[10px] text-emerald-400 font-semibold uppercase bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-800/40">Isento</span></td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valAllowanceThirdPay">R$ 0,00</td>
+                                        </tr>
+                                        <tr id="row13th" class="hidden">
+                                            <td class="py-2.5 text-slate-300 print-text-dark">Adiantamento 1ª Parcela do 13º Salário</td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="val13thPay">R$ 0,00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tabela Descontos -->
+                        <div>
+                            <h4 class="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-minus text-[10px]"></i> Descontos Oficializados
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <tbody class="divide-y divide-slate-700/50 print-border">
+                                        <tr>
+                                            <td class="py-2.5 text-slate-300 print-text-dark flex items-center justify-between">
+                                                <span>INSS (Previdência Social)</span>
+                                                <span class="text-[11px] text-slate-400 font-normal no-print" id="inssRateInfo"></span>
+                                            </td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valINSS">R$ 0,00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-2.5 text-slate-300 print-text-dark flex items-center justify-between">
+                                                <span>IRRF (Imposto de Renda)</span>
+                                                <span class="text-[11px] text-slate-400 font-normal no-print" id="irrfRateInfo"></span>
+                                            </td>
+                                            <td class="py-2.5 text-right font-semibold text-slate-100 print-text-dark" id="valIRRF">R$ 0,00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nota Informativa -->
+                    <div class="mt-4 p-3 bg-slate-900/60 rounded-xl border border-slate-700/50 text-xs text-slate-400 space-y-1 no-print">
+                        <p><i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i> <strong>Nota Trabalhista:</strong> O Abono Pecuniário e o adiantamento do 13º salário não sofrem tributação de INSS e IRRF no recibo de férias. Havendo incidência de IRRF quando a base tributável ultrapassa R$ 5.000,00.</p>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="mt-6 pt-4 border-t border-slate-700/80 flex flex-wrap justify-between items-center gap-3 no-print">
+                        <button onclick="window.print()" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-semibold transition-all duration-150 flex items-center gap-2 active:scale-95">
+                            <i class="fa-solid fa-print"></i> Imprimir Simulação
+                        </button>
+                        <button onclick="copySummary()" class="px-4 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-sm font-semibold transition-all duration-150 flex items-center gap-2 active:scale-95">
+                            <i class="fa-solid fa-copy"></i> Copiar Resumo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-xs text-slate-500 py-4 border-t border-slate-800 mt-8 no-print">
+            Calculadora atualizada com tabela progressiva do INSS e regra de incidência de IRRF para bases superiores a R$ 5.000,00.
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('#vacationForm input, #vacationForm select');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    handleSellDaysToggle();
+                    handleAbsenceWarning();
+                    calculateVacation();
+                });
+                input.addEventListener('change', () => {
+                    handleSellDaysToggle();
+                    handleAbsenceWarning();
+                    calculateVacation();
+                });
+            });
+
+            handleSellDaysToggle();
+            handleAbsenceWarning();
+            calculateVacation();
+        });
+
+        function resetForm() {
+            document.getElementById('vacationForm').reset();
+            handleSellDaysToggle();
+            handleAbsenceWarning();
+            calculateVacation();
+            showToast('Formulário limpo com sucesso!', 'info');
+        }
+
+        function handleSellDaysToggle() {
+            const sellDaysCheckbox = document.getElementById('sellDays');
+            const vacationDaysSelect = document.getElementById('vacationDays');
+            const opt30 = document.getElementById('opt30Days');
+
+            if (sellDaysCheckbox.checked) {
+                if (opt30) {
+                    opt30.disabled = true;
+                    opt30.hidden = true;
+                }
+                if (vacationDaysSelect.value === "30") {
+                    vacationDaysSelect.value = "20";
+                }
+            } else {
+                if (opt30) {
+                    opt30.disabled = false;
+                    opt30.hidden = false;
+                }
+            }
+        }
+
+        function handleAbsenceWarning() {
+            const absences = parseInt(document.getElementById('unjustifiedAbsences').value) || 0;
+            const warningEl = document.getElementById('absenceWarning');
+            let allowedDays = 30;
+
+            if (absences >= 6 && absences <= 14) allowedDays = 24;
+            else if (absences >= 15 && absences <= 23) allowedDays = 18;
+            else if (absences >= 24 && absences <= 32) allowedDays = 12;
+            else if (absences > 32) allowedDays = 0;
+
+            if (allowedDays < 30) {
+                warningEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Direito reduzido para <strong>${allowedDays} dias</strong> de férias (Art. 130 CLT)`;
+                warningEl.className = "mt-1.5 p-2 bg-amber-950/30 rounded-lg border border-amber-800/50 text-xs text-amber-300 flex items-center gap-2 font-medium";
+            } else {
+                warningEl.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i> Direito integral: 30 dias de férias`;
+                warningEl.className = "mt-1.5 p-2 bg-slate-900/50 rounded-lg border border-slate-700 text-xs text-slate-400 flex items-center gap-2";
+            }
+        }
+
+        function calculateINSS(base) {
+            if (base <= 0) return 0;
+            let inss = 0;
+            const brackets = [
+                { limit: 1412.00, rate: 0.075 },
+                { limit: 2666.68, rate: 0.09 },
+                { limit: 4000.03, rate: 0.12 },
+                { limit: 7786.02, rate: 0.14 }
+            ];
+
+            let lastLimit = 0;
+            for (let b of brackets) {
+                if (base > b.limit) {
+                    inss += (b.limit - lastLimit) * b.rate;
+                    lastLimit = b.limit;
+                } else {
+                    inss += (base - lastLimit) * b.rate;
+                    return Math.min(inss, 908.85);
+                }
+            }
+            return Math.min(inss, 908.85);
+        }
+
+        function calculateIRRF(taxableBase, dependentsCount) {
+            // Se a base de cálculo tributável for até R$ 5.000,00, permanece totalmente isento
+            if (taxableBase <= 5000.00) return 0;
+
+            const dependentDeduction = dependentsCount * 189.59;
+            const simplifiedDeduction = 564.80;
+            
+            const baseStandard = Math.max(0, taxableBase - dependentDeduction);
+            const baseSimplified = Math.max(0, taxableBase - simplifiedDeduction);
+            
+            function getTax(base) {
+                if (base <= 2259.20) return 0;
+                if (base <= 2826.65) return (base * 0.075) - 169.44;
+                if (base <= 3751.05) return (base * 0.15) - 381.44;
+                if (base <= 4664.68) return (base * 0.225) - 662.77;
+                return (base * 0.275) - 896.00;
+            }
+
+            const taxStandard = getTax(baseStandard);
+            const taxSimplified = getTax(baseSimplified);
+
+            return Math.max(0, Math.min(taxStandard, taxSimplified));
+        }
+
+        function calculateVacation() {
+            const grossSalary = parseFloat(document.getElementById('grossSalary').value) || 0;
+            const extraAvg = parseFloat(document.getElementById('extraAvg').value) || 0;
+            const nightShiftAvg = parseFloat(document.getElementById('nightShiftAvg').value) || 0;
+            const hasHazardPay = document.getElementById('hazardPay').checked;
+            let vacationDaysSelect = parseInt(document.getElementById('vacationDays').value) || 30;
+            const absences = parseInt(document.getElementById('unjustifiedAbsences').value) || 0;
+            const dependents = parseInt(document.getElementById('dependents').value) || 0;
+            const sellDays = document.getElementById('sellDays').checked;
+            const advance13th = document.getElementById('advance13th').checked;
+            const returnBonus = document.getElementById('returnBonus').checked;
+
+            if (grossSalary <= 0) {
+                clearResults();
+                return;
+            }
+
+            const hazardPayMonthly = hasHazardPay ? (grossSalary * 0.30) : 0;
+
+            if (sellDays && vacationDaysSelect > 20) {
+                vacationDaysSelect = 20;
+            }
+
+            let maxAllowedDays = 30;
+            if (absences >= 6 && absences <= 14) maxAllowedDays = 24;
+            else if (absences >= 15 && absences <= 23) maxAllowedDays = 18;
+            else if (absences >= 24 && absences <= 32) maxAllowedDays = 12;
+            else if (absences > 32) maxAllowedDays = 0;
+
+            const daysToCalculate = Math.min(vacationDaysSelect, maxAllowedDays);
+
+            const totalMonthlyBase = grossSalary + hazardPayMonthly + extraAvg + nightShiftAvg;
+            const dailyRate = totalMonthlyBase / 30;
+
+            const hazardVacationPay = (hazardPayMonthly / 30) * daysToCalculate;
+            const nightShiftVacationPay = (nightShiftAvg / 30) * daysToCalculate;
+
+            const totalVacationDaysPay = dailyRate * daysToCalculate;
+            const thirdPay = totalVacationDaysPay / 3;
+
+            // Cálculo do Benefício de Retorno de Férias (2/3 do Salário)
+            const returnBonusPay = returnBonus ? (grossSalary * 2 / 3) : 0;
+
+            if (hasHazardPay) {
+                document.getElementById('rowHazard').classList.remove('hidden');
+                document.getElementById('valHazardPay').textContent = formatCurrency(hazardVacationPay);
+            } else {
+                document.getElementById('rowHazard').classList.add('hidden');
+            }
+
+            if (nightShiftAvg > 0) {
+                document.getElementById('rowNightShift').classList.remove('hidden');
+                document.getElementById('valNightShiftPay').textContent = formatCurrency(nightShiftVacationPay);
+            } else {
+                document.getElementById('rowNightShift').classList.add('hidden');
+            }
+
+            if (returnBonus) {
+                document.getElementById('rowReturnBonus').classList.remove('hidden');
+                document.getElementById('valReturnBonusPay').textContent = formatCurrency(returnBonusPay);
+            } else {
+                document.getElementById('rowReturnBonus').classList.add('hidden');
+            }
+
+            document.getElementById('labelVacationPay').textContent = `Valor de Férias desfrutadas (${daysToCalculate} dias)`;
+            document.getElementById('valVacationPay').textContent = formatCurrency(totalVacationDaysPay);
+            document.getElementById('valThirdPay').textContent = formatCurrency(thirdPay);
+
+            let allowancePay = 0;
+            let allowanceThirdPay = 0;
+            if (sellDays) {
+                allowancePay = dailyRate * 10;
+                allowanceThirdPay = allowancePay / 3;
+                document.getElementById('rowAllowance').classList.remove('hidden');
+                document.getElementById('rowAllowanceThird').classList.remove('hidden');
+                document.getElementById('valAllowancePay').textContent = formatCurrency(allowancePay);
+                document.getElementById('valAllowanceThirdPay').textContent = formatCurrency(allowanceThirdPay);
+            } else {
+                document.getElementById('rowAllowance').classList.add('hidden');
+                document.getElementById('rowAllowanceThird').classList.add('hidden');
+            }
+
+            let pay13th = 0;
+            if (advance13th) {
+                pay13th = grossSalary / 2;
+                document.getElementById('row13th').classList.remove('hidden');
+                document.getElementById('val13thPay').textContent = formatCurrency(pay13th);
+            } else {
+                document.getElementById('row13th').classList.add('hidden');
+            }
+
+            // Proventos tributáveis para incidência de INSS e IRRF
+            const taxableEarnings = totalVacationDaysPay + thirdPay + returnBonusPay;
+
+            const totalEarnings = taxableEarnings + allowancePay + allowanceThirdPay + pay13th;
+
+            const inssDeduction = calculateINSS(taxableEarnings);
+
+            // Base para cálculo do IRRF
+            const irrfTaxableBase = taxableEarnings - inssDeduction;
+            const irrfDeduction = calculateIRRF(irrfTaxableBase, dependents);
+
+            const totalDeductions = inssDeduction + irrfDeduction;
+            const netTotal = totalEarnings - totalDeductions;
+
+            document.getElementById('cardEarnings').textContent = formatCurrency(totalEarnings);
+            document.getElementById('cardDeductions').textContent = formatCurrency(totalDeductions);
+            document.getElementById('cardNetTotal').textContent = formatCurrency(netTotal);
+            document.getElementById('badgeDaysEnjoyed').textContent = `${daysToCalculate} dias desfrutados`;
+
+            document.getElementById('valINSS').textContent = formatCurrency(inssDeduction);
+            document.getElementById('valIRRF').textContent = formatCurrency(irrfDeduction);
+
+            if (irrfTaxableBase <= 5000.00) {
+                document.getElementById('irrfRateInfo').textContent = '(Isento ≤ R$ 5.000)';
+            } else {
+                document.getElementById('irrfRateInfo').textContent = '(Tributado acima de R$ 5.000)';
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('cardEarnings').textContent = 'R$ 0,00';
+            document.getElementById('cardDeductions').textContent = 'R$ 0,00';
+            document.getElementById('cardNetTotal').textContent = 'R$ 0,00';
+            document.getElementById('valVacationPay').textContent = 'R$ 0,00';
+            document.getElementById('valThirdPay').textContent = 'R$ 0,00';
+            document.getElementById('valINSS').textContent = 'R$ 0,00';
+            document.getElementById('valIRRF').textContent = 'R$ 0,00';
+        }
+
+        function formatCurrency(val) {
+            return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 bg-slate-800 text-slate-100 border-slate-700`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i> ${message}`;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function copySummary() {
+            const net = document.getElementById('cardNetTotal').textContent;
+            const gross = document.getElementById('cardEarnings').textContent;
+            const deductions = document.getElementById('cardDeductions').textContent;
+
+            const text = `Simulação de Férias CLT:\n• Total Proventos: ${gross}\n• Total Descontos: ${deductions}\n• Valor Líquido a Receber: ${net}`;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Resumo copiado para a área de transferência!');
+            });
+        }
+    </script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((registration) => {
+          console.log('Service Worker registrado com sucesso:', registration.scope);
+        })
+        .catch((error) => {
+          console.error('Falha ao registrar o Service Worker:', error);
+        });
+    });
+  }
+</script>
+</body>
+</html>
