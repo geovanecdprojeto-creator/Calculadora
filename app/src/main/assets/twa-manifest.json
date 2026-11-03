@@ -1,0 +1,9 @@
+{
+    "name": "Calculadora de Ferias",
+    "short_name": "Cal. de Ferias",
+    "description": "Calcula ferias",
+    "start_url": "https://geovanecdprojeto-creator.github.io/Calculadora/",
+    "display": "fullscreen",
+    "orientation": "portrait",
+    "scope": "/"
+}
